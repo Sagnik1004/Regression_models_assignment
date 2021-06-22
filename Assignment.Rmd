@@ -1,0 +1,118 @@
+---
+title: "Regression_Models_Assignment"
+author: "Me"
+date: "26/05/2021"
+output: pdf_document
+---
+# Executive Summary
+
+This assignment will study the relationships of variables in the mtcars dataset and find out whether automatic or manual transmission is better for MPG.
+
+To quickly summarize the conclusion from our analysis here: manual transmission is better than automatic for MPG
+
+# Contents:
+
+1. A short exploratory analysis before model fitting and model selection
+2. Main report
+3. Residual plot (using Model B)
+4. Appendices containing some graphs
+
+# A short exploratory analysis before model fitting and model selection
+
+
+```{r setup, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+
+cars<- mtcars #copying mtcars dataset into a fresh new variable 'cars' as we don't want to disturb the original dataset
+str(cars)
+head(cars)
+#plotting MPG on y axis and Transmission on x axis
+boxplot(mpg~am, data= cars, col='red', xlab='Transmission (0 = automatic, 1 = manual)', main='mpg vs Transmission')
+
+```
+
+**So as we can see, a quick boxplot analysis (without considering the influence of the other variables) is showing that manual transmisson is better than automatic transmission for MPG.**
+
+\newpage
+
+# Main Report/Analysis
+
+Here we have been asked to study the relationship between MPG and Transmission (automatic or manual)
+
+So our outcome variable is mpg and the chief predictor variable will be am (0= automatic, 1= manual)
+
+### Model A (without adjusting for the rest of the variables)
+
+Let's consider a model with only mpg (outcome var) and am(predictor) without adjusting for the other variables.
+We will be removing the intercept as we want to see the true slope coefficients
+
+```{r echo=TRUE}
+modelA<- lm(mpg~factor(am)-1, data = cars)
+summary(modelA)
+```
+
+So as we can see, slope coefficient of manual transmission is higher than that of automatic transmission. This means
+mpg increases more for every new/added car with manual transmission than one with automatic transmission.
+The standard errors are also reasonably low indicating less uncertainty in our estimates.
+
+**So this model suggests manual tranmission is better than automatic transmission**
+
+### Model B (multi-variable model i.e. adjusting for the other important/necessary variables)
+
+Since we didn't adjust for the effects of the other variables in model A, so we shouldn't take it's output very seriously. Hence, we should create a model that adjusts for the effects of the other variables. 
+
+However, we don't want any unnecessary variables in our model. So let's first create a nested model and test whether each variable is necessary with the help of the anova function. 
+
+Our alpha level will be 5% i.e. if the p value is less than 0.05, we reject the variable in question from the model as they are not necessary
+
+```{r echo=TRUE}
+#doing nested models now to find unnecessary variables
+
+m1<- lm(mpg~factor(am), data = cars)
+m2<- update(m1, mpg~factor(am)+factor(cyl))
+m3<- update(m2, mpg~factor(am)+factor(cyl)+disp)
+m4<- update(m3, mpg~factor(am)+factor(cyl)+disp+hp)
+m5<- update(m4, mpg~factor(am)+factor(cyl)+disp+hp+drat)
+m6<- update(m5, mpg~factor(am)+factor(cyl)+disp+hp+drat+wt)
+m7<- update(m6, mpg~factor(am)+factor(cyl)+disp+hp+drat+wt+qsec)
+m8<- update(m7, mpg~factor(am)+factor(cyl)+disp+hp+drat+wt+qsec+factor(vs))
+m9<- update(m8, mpg~factor(am)+factor(cyl)+disp+hp+drat+wt+qsec+factor(vs)+factor(gear))
+m10<- update(m9, mpg~factor(am)+factor(cyl)+disp+hp+drat+wt+qsec+factor(vs)+factor(gear)+carb)
+anova(m1, m2, m3, m4, m5, m6, m7, m8, m9, m10)
+```
+
+**On basis of this above output from the anova function and setting our alpha level to 5% or 0.05, we can conclude the variables drat, qsec, vs, gear and carb are unnecessary for our model.** 
+
+Therefore, the necessary variables/predictors for our model are: am, cyl, disp, hp, wt
+so we will create our model with these 5 chosen predictors
+
+**Creating our final model i.e. Model B**
+
+```{r echo=TRUE}
+modelB<- lm(mpg~factor(am)+factor(cyl)+disp+hp+wt-1, data= cars)
+summary(modelB)
+```
+So as we can see, true slope coefficient for manual transmission=35.670376, is still larger than that of automatic transmission=33.864276. So mpg increases more by 1.8061 miles per gallon (35.670376-33.864276) for every new car with manual transmission than one with automatic transmission. 
+
+**However, this time standard errors are over 2 which indicates much higher uncertainty in our estimates.**
+
+**Conclusion: manual transmission is better for MPG than automatic transmission**
+
+\newpage
+
+# Residual plot: using model B
+
+```{r echo=TRUE}
+e_modelB<- resid(modelB)
+boxplot(e_modelB~cars$am,  xlab='Transmission (0 = automatic, 1 = manual)', ylab = 'residuals', main= 'residual plot')
+abline(h=0, lwd=2)
+```
+
+\newpage
+
+# Appendices
+
+Here we create a box plot for showing the relationship between our estimated mpg values and am (0= automatic, 1= manual) from modelB (adjusting for all of the other important/necessary variables)
+```{r echo=TRUE}
+boxplot(predict(modelB)~cars$am, col='red', xlab='Transmission (0 = automatic, 1 = manual)', ylab='predicted mpg' ,main='Model B: Predicted mpg vs Transmission')
+```
